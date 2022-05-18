@@ -2,9 +2,9 @@ import { name as isValidIdentifierName } from 'estree-util-is-identifier-name';
 import { valueToEstree } from 'estree-util-value-to-estree';
 import { load } from 'js-yaml';
 import { Root, YAML } from 'mdast';
-import { MDXJSEsm } from 'mdast-util-mdx';
+import { MdxjsEsm } from 'mdast-util-mdx';
 import { parse } from 'toml';
-import { Attacher } from 'unified';
+import { Plugin } from 'unified';
 
 export interface RemarkMdxFrontmatterOptions {
   /**
@@ -20,11 +20,11 @@ export interface RemarkMdxFrontmatterOptions {
  * @param options - Optional options to configure the output.
  * @returns A unified transformer.
  */
-export const remarkMdxFrontmatter: Attacher<[RemarkMdxFrontmatterOptions?]> =
+export const remarkMdxFrontmatter: Plugin<[RemarkMdxFrontmatterOptions?]> =
   ({ name } = {}) =>
   (ast) => {
     const mdast = ast as Root;
-    const imports: MDXJSEsm[] = [];
+    const assigns: MdxjsEsm[] = [];
 
     if (name && !isValidIdentifierName(name)) {
       throw new Error(
@@ -50,43 +50,31 @@ export const remarkMdxFrontmatter: Attacher<[RemarkMdxFrontmatterOptions?]> =
         throw new Error(`Expected frontmatter data to be an object, got:\n${value}`);
       }
 
-      imports.push({
+      assigns.push({
         type: 'mdxjsEsm',
         value: '',
         data: {
           estree: {
             type: 'Program',
             sourceType: 'module',
-            body: [
-              {
-                type: 'ExportNamedDeclaration',
-                source: null,
-                specifiers: [],
-                declaration: {
-                  type: 'VariableDeclaration',
-                  kind: 'const',
-                  declarations: Object.entries(name ? { [name]: data } : (data as object)).map(
-                    ([identifier, val]) => {
-                      if (!isValidIdentifierName(identifier)) {
-                        throw new Error(
-                          `Frontmatter keys should be valid identifiers, got: ${JSON.stringify(
-                            identifier,
-                          )}`,
-                        );
-                      }
-                      return {
-                        type: 'VariableDeclarator',
-                        id: { type: 'Identifier', name: identifier },
-                        init: valueToEstree(val),
-                      };
-                    },
-                  ),
+            body: Object.entries(data as object).map(([key, val]) => ({
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'AssignmentExpression',
+                operator: '=',
+                left: {
+                  type: 'MemberExpression',
+                  object: { type: 'Identifier', name: 'MDXContent' },
+                  property: { type: 'Identifier', name: key },
+                  computed: false,
+                  optional: false,
                 },
+                right: valueToEstree(val),
               },
-            ],
+            })),
           },
         },
       });
     }
-    mdast.children.unshift(...imports);
+    mdast.children.push(...assigns);
   };

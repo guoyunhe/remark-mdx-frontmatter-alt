@@ -1,12 +1,7 @@
-import { promises as fs, readdirSync } from 'fs';
-import { createRequire } from 'module';
-import { join } from 'path';
-
 import { compile, compileSync } from '@mdx-js/mdx';
 import remarkFrontmatter from 'remark-frontmatter';
-import test from 'tape';
 
-const { remarkMdxFrontmatter } = createRequire(import.meta.url)('./src/index.ts');
+import { remarkMdxFrontmatter } from '../src';
 
 const tests = readdirSync('__fixtures__');
 
