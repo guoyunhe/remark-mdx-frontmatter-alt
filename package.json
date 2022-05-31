@@ -34,7 +34,7 @@
     "node": ">=12.2.0"
   },
   "scripts": {
-    "prepack": "tsc --project tsconfig.build.json",
+    "build": "tsc --project tsconfig.build.json",
     "test": "ts-node index.test.mjs"
   },
   "dependencies": {
